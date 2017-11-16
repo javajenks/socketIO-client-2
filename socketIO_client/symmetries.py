@@ -36,6 +36,13 @@ def get_byte(x, index):
     return six.indexbytes(x, index)
 
 
+def get_byte_iterator(x):
+    return six.iterbytes(x)
+
+
+def get_uni_chr(byte):
+    return six.unichr(byte)
+
 def encode_string(x):
     return x.encode('utf-8')
 

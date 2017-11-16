@@ -5,7 +5,7 @@ from base64 import b64encode
 from copy import deepcopy
 
 from .symmetries import (
-    decode_string, encode_string, get_byte, get_character, get_int, parse_url)
+    decode_string, encode_string, get_byte, get_character, get_int, parse_url, get_byte_iterator, get_uni_chr)
 
 
 EngineIOSession = namedtuple('EngineIOSession', [
@@ -199,16 +199,11 @@ def _make_packet_prefix(packet):
 
 
 def _read_packet_length(content, content_index):
-    while get_byte(content, content_index) not in [0, 1]:
+    for byte in get_byte_iterator(content):
+        if get_uni_chr(byte) == ":":
+            break
         content_index += 1
-    content_index += 1
-    packet_length_string = ''
-    byte = get_byte(content, content_index)
-    while byte != 255:
-        packet_length_string += str(byte)
-        content_index += 1
-        byte = get_byte(content, content_index)
-    return content_index, int(packet_length_string)
+    return content_index+1, int(content[:content_index])
 
 
 def _read_packet_text(content, content_index, packet_length):
