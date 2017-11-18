@@ -153,7 +153,14 @@ class WebsocketTransport(AbstractTransport):
 
     def recv_packet(self):
         try:
-            packet_text = self._connection.recv()
+            # Note recv() returns '' on when OPCODE_CLOSE..
+            opcode, frame_data = self._connection.recv_data()
+            if opcode == websocket.ABNF.OPCODE_CLOSE:
+                raise ConnectionError('recv closed by server')
+            elif six.PY3 and opcode == websocket.ABNF.OPCODE_TEXT:
+                packet_text  = frame_data.decode("utf-8")
+            else:
+                packet_text = frame_data
         except websocket.WebSocketTimeoutException as e:
             raise TimeoutError('recv timed out (%s)' % e)
         except SSLError as e:
@@ -191,10 +198,10 @@ def get_response(request, *args, **kw):
         response = request(*args, stream=True, **kw)
     except requests.exceptions.Timeout as e:
         raise TimeoutError(e)
-    except requests.exceptions.ConnectionError as e:
-        raise ConnectionError(e)
     except requests.exceptions.SSLError as e:
         raise ConnectionError('could not negotiate SSL (%s)' % e)
+    except requests.exceptions.ConnectionError as e:
+        raise ConnectionError(e)
     status_code = response.status_code
     if 200 != status_code:
         raise ConnectionError('unexpected status code (%s %s)' % (
